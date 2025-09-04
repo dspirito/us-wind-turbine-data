@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USWTDB Turbine Viewer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .turbine-list {
+            margin-top: 20px;
+        }
+        .turbine-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .turbine-card h5 {
+            margin-bottom: 10px;
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="my-4">U.S. Wind Turbine Database Viewer</h2>
+
+        <div class="form-group">
+            <label for="stateSelect">Select a State:</label>
+            <select class="form-control" id="stateSelect">
+                <option value="">Loading States...</option>
+            </select>
+        </div>
+
+        <div class="turbine-list" id="turbineList">
+            <!-- Turbine data will be loaded here -->
+            <p>Select a state to view turbines.</p>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const stateSelect = document.getElementById('stateSelect');
+            const turbineList = document.getElementById('turbineList');
+
+            // Function to fetch states
+            async function fetchStates() {
+                try {
+                    const response = await fetch('/api/states');
+                    const states = await response.json();
+                    stateSelect.innerHTML = ''; // Clear loading message
+                    stateSelect.appendChild(new Option('-- Select a State --', ''));
+                    states.forEach(state => {
+                        stateSelect.appendChild(new Option(state, state));
+                    });
+                } catch (error) {
+                    console.error('Error fetching states:', error);
+                    stateSelect.innerHTML = '<option value="">Error loading states</option>';
+                }
+            }
+
+            // Function to fetch and display turbines
+            async function fetchAndDisplayTurbines(state) {
+                if (!state) {
+                    turbineList.innerHTML = '<p>Select a state to view turbines.</p>';
+                    return;
+                }
+                turbineList.innerHTML = '<p>Loading turbines for ' + state + '...</p>';
+                try {
+                    const response = await fetch(`/api/turbines?state=${state}`);
+                    const turbines = await response.json();
+                    turbineList.innerHTML = '';
+                    if (turbines.length === 0) {
+                        turbineList.innerHTML = '<p>No turbines found for ' + state + '.</p>';
+                    } else {
+                        turbines.forEach(turbine => {
+                            const turbineCard = `
+                                <div class="turbine-card">
+                                    <h5>${turbine.p_name || 'N/A'} (${turbine.t_state})</h5>
+                                    <p><strong>Turbine Model:</strong> ${turbine.t_model || 'N/A'}</p>
+                                    <p><strong>Capacity (kW):</strong> ${turbine.t_cap || 'N/A'}</p>
+                                    <p><strong>Rotor Diameter (m):</strong> ${turbine.t_rd || 'N/A'}</p>
+                                    <p><strong>Hub Height (m):</strong> ${turbine.t_hh || 'N/A'}</p>
+                                    <p><strong>Operational Year:</strong> ${turbine.p_year || 'N/A'}</p>
+                                </div>
+                            `;
+                            turbineList.innerHTML += turbineCard;
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error fetching turbines:', error);
+                    turbineList.innerHTML = '<p>Error loading turbines.</p>';
+                }
+            }
+
+            // Event listener for state dropdown change
+            stateSelect.addEventListener('change', function() {
+                fetchAndDisplayTurbines(this.value);
+            });
+
+            // Initial fetch of states
+            fetchStates();
+        });
+    </script>
+</body>
+</html>
